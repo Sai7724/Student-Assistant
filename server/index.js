@@ -6,7 +6,7 @@ try {
 } catch {}
 
 const KEY = process.env.GEMINI_API_KEY
-const MODEL = 'gemini-2.5-flash'
+const MODEL = 'gemini-3.8-flash'
 const GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`
 
 const app = express()
@@ -76,7 +76,8 @@ async function askGemini(topic) {
   }
 
   const body = await response.json()
-  return body.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  // newer models sometimes split one reply across several parts, so join them all
+  return (body.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('')
 }
 
 // keep this shape in sync with validate.js
