@@ -36,7 +36,13 @@ export async function handleGenerate(req, res) {
     res.json({ raw: await askGemini(topic) })
   } catch (err) {
     console.error('[generate]', err.message)
-    res.status(502).json({ error: 'The AI service did not respond.' })
+    // 429 = free-tier rate limit, 503 = gemini overloaded. both clear up on their own
+    const busy = err.status === 429 || err.status === 503
+    res.status(502).json({
+      error: busy
+        ? 'The AI is busy right now (rate limit or high demand). Wait a minute and try again.'
+        : 'The AI service did not respond.',
+    })
   }
 }
 
@@ -72,7 +78,9 @@ async function askGemini(topic) {
   })
 
   if (!response.ok) {
-    throw new Error(`Gemini ${response.status}: ${await response.text()}`)
+    const err = new Error(`Gemini ${response.status}: ${await response.text()}`)
+    err.status = response.status
+    throw err
   }
 
   const body = await response.json()
