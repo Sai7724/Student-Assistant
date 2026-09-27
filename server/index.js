@@ -12,8 +12,9 @@ const GEMINI = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}
 const app = express()
 app.use(express.json())
 
-// only job is keeping the key off the client. sends back the raw text, the browser validates it
-app.post('/api/generate', async (req, res) => {
+// only job is keeping the key off the client. sends back the raw text, the browser validates it.
+// exported so api/generate.js can reuse it as the vercel function
+export async function handleGenerate(req, res) {
   const topic = String(req.body?.topic ?? '').trim()
 
   if (!topic) {
@@ -37,7 +38,9 @@ app.post('/api/generate', async (req, res) => {
     console.error('[generate]', err.message)
     res.status(502).json({ error: 'The AI service did not respond.' })
   }
-})
+}
+
+app.post('/api/generate', handleGenerate)
 
 // dev only - fake each failure so the error states can be tested without waiting for gemini to break
 const SIMULATED = {
@@ -52,7 +55,10 @@ const SIMULATED = {
   error: (res) => res.status(500).json({ error: 'Simulated server failure.' }),
 }
 
-app.listen(8787, () => console.log('api  ready on http://localhost:8787'))
+// vercel runs api/generate.js as a function instead, nothing should listen there
+if (!process.env.VERCEL) {
+  app.listen(8787, () => console.log('api  ready on http://localhost:8787'))
+}
 
 // thinkingBudget: 0 turns off reasoning, cut response time from ~8.5s to ~4s
 async function askGemini(topic) {
